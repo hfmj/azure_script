@@ -1,0 +1,93 @@
+Connect-AzureRmAccount -Environment: AzureChinaCloud 
+
+create user:
+New-AzureRmADUser -DisplayName "External-Connext-Test" -UserPrincipalName "aa.connext@boschcn.partner.onmschina.cn" -Password $SecureStringPassword -MailNickname "rbacuser"
+
+$PasswordProfile = New-Object -TypeName Microsoft.Open.AzureAD.Model.PasswordProfile
+
+$PasswordProfile.Password = "Password"
+
+New-AzureADUser -DisplayName "New User" -PasswordProfile $PasswordProfile -UserPrincipalName "NewUser@contoso.com" -AccountEnabled $true -MailNickName "Newuser"
+
+
+Assign role
+//copy the role of 'Tyrone' in each subscripitont to another user
+  $sub_list=Get-AzureRmSubscription
+  $copy_from_user="tyrone.tao@boschcn.partner.onmschina.cn"
+  $copy_to_user="aa.connext@boschcn.partner.onmschina.cn"
+  foreach ($item in $sub_list) {
+    if ($item -ieq "Disabled") {continue}
+  	write-host "Sub ID:" $item.Id 
+  	write-host "Sub Name:" $item.Name
+
+    $subScope = "/subscriptions/"+$item.Id
+
+    $copy_from_profile=Get-AzureRmRoleAssignment -SignInName $copy_from_user -Scope $subScope
+
+    if ($copy_from_profile -eq $null) {
+    	write-host ""
+    	continue
+    }
+    write-host "Role Name:" $copy_from_profile.RoleDefinitionName
+
+    New-AzureRmRoleAssignment -SignInName $copy_to_user -RoleDefinitionName $copy_from_profile.RoleDefinitionName -Scope $subScope 
+	write-host ""
+  }
+
+
+  New-AzureRmRoleAssignment -ObjectId f39ca69e-edea-48ea-969f-ca88d3f706b8 -RoleDefinitionName Contributor -Scope /subscriptions/d8b7c9c6-87de-4906-9920-16a8c3e3cbf7
+
+//copy the role of 'Tyrone' in each subscripitont to group 'Connext'
+  $connext_group=Get-AzureRmADGroup -SearchString Connext
+  $sub_list=Get-AzureRmSubscription
+  $copy_from_user="tyrone.tao@boschcn.partner.onmschina.cn"
+  $copy_to_group_id=$connext_group.id
+  foreach ($item in $sub_list) {
+    if ($item -ieq "Disabled") {continue}
+  	write-host "Sub ID:" $item.Id 
+  	write-host "Sub Name:" $item.Name
+
+    $subScope = "/subscriptions/"+$item.Id
+
+    $copy_from_profile=Get-AzureRmRoleAssignment -SignInName $copy_from_user -Scope $subScope
+
+    if ($copy_from_profile -eq $null) {
+    	write-host ""
+    	continue
+    }
+    write-host "Role Name:" $copy_from_profile.RoleDefinitionName
+
+    New-AzureRmRoleAssignment -ObjectId $copy_to_group_id -RoleDefinitionName $copy_from_profile.RoleDefinitionName -Scope $subScope 
+	write-host ""
+  }
+
+Get-AzureRmADUser -UserPrincipalName tyrone.tao@boschcn.partner.onmschina.cn
+Get-AzureRmRoleAssignment  -SignInName tyrone.tao@boschcn.partner.onmschina.cn
+
+//remove role of specified users in each subscripitont
+  $sub_list=Get-AzureRmSubscription
+  $user_remove="weipu.huo@boschcn.partner.onmschina.cn"
+
+  foreach ($item in $sub_list) {
+    if ($item -ieq "Disabled") {continue}
+  	write-host "Sub ID:" $item.Id 
+  	write-host "Sub Name:" $item.Name
+
+    $subScope = "/subscriptions/"+$item.Id
+
+    $user_profile=Get-AzureRmRoleAssignment -SignInName $user_remove -Scope $subScope
+
+    if ($user_profile -eq $null) {
+    	write-host ""
+    	continue
+    }
+    write-host "Role Name:" $user_profile.RoleDefinitionName
+
+    Remove-AzureRmRoleAssignment -SignInName $user_remove -RoleDefinitionName $user_profile.RoleDefinitionName -Scope $subScope 
+
+	write-host "Removed"
+	write-host ""
+  }
+
+
+      Remove-AzureRmRoleAssignment -SignInName weipu.huo@boschcn.partner.onmschina.cn  -RoleDefinitionName Contributor -Scope /subscriptions/82e6d1b0-5258-4844-8c5b-975a666fa1d8
